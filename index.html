@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AGRL — Anti-Gravity Research Laboratory</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;600&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --void:#020408;--deep:#050d1a;--panel:#0a1628;--glass:rgba(10,22,44,0.7);
+  --cyan:#00e5ff;--violet:#7c3aed;--plasma:#a78bfa;--white:#e8f4ff;--muted:#6b8fac;
+  --glow-cyan:0 0 20px rgba(0,229,255,0.4);--glow-v:0 0 20px rgba(124,58,237,0.5);
+}
+html{scroll-behavior:smooth;}
+body{background:var(--void);color:var(--white);font-family:'Space Grotesk',sans-serif;overflow-x:hidden;cursor:none;}
+
+/* CURSOR */
+#cursor{position:fixed;width:12px;height:12px;background:var(--cyan);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:transform 0.1s;mix-blend-mode:screen;}
+#cursor-ring{position:fixed;width:36px;height:36px;border:1px solid rgba(0,229,255,0.5);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:all 0.15s ease;}
+
+/* CANVAS */
+#particle-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;opacity:0.5;}
+
+/* NAV */
+nav{position:fixed;top:0;width:100%;z-index:1000;padding:1.2rem 3rem;display:flex;justify-content:space-between;align-items:center;backdrop-filter:blur(20px);background:rgba(2,4,8,0.6);border-bottom:1px solid rgba(0,229,255,0.08);}
+.logo{font-family:'Orbitron',monospace;font-size:1.1rem;font-weight:900;color:var(--cyan);letter-spacing:3px;}
+.logo span{color:var(--plasma);font-weight:400;}
+.nav-links{display:flex;gap:2rem;}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:0.85rem;letter-spacing:1.5px;text-transform:uppercase;transition:color 0.3s;}
+.nav-links a:hover{color:var(--cyan);}
+
+/* HERO */
+#hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;z-index:1;padding:2rem;padding-top:80px;}
+.hero-tag{font-family:'Rajdhani',sans-serif;font-size:0.85rem;letter-spacing:4px;color:var(--cyan);text-transform:uppercase;margin-bottom:1.5rem;opacity:0.8;}
+h1.hero-title{font-family:'Orbitron',monospace;font-size:clamp(2.5rem,6vw,5rem);font-weight:900;line-height:1.1;margin-bottom:1.5rem;background:linear-gradient(135deg,#e8f4ff 0%,#00e5ff 40%,#7c3aed 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-sub{font-family:'Space Grotesk',sans-serif;font-size:1.1rem;color:var(--muted);max-width:560px;margin:0 auto 2.5rem;line-height:1.7;font-weight:300;}
+.hero-buttons{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;}
+.btn-primary{padding:0.9rem 2.2rem;background:var(--cyan);color:#020408;font-family:'Orbitron',monospace;font-size:0.8rem;font-weight:700;letter-spacing:2px;border:none;border-radius:2px;cursor:pointer;text-decoration:none;display:inline-block;transition:all 0.3s;}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:var(--glow-cyan);}
+.btn-outline{padding:0.9rem 2.2rem;background:transparent;color:var(--plasma);font-family:'Orbitron',monospace;font-size:0.8rem;font-weight:700;letter-spacing:2px;border:1px solid rgba(124,58,237,0.5);border-radius:2px;cursor:pointer;text-decoration:none;display:inline-block;transition:all 0.3s;}
+.btn-outline:hover{border-color:var(--plasma);box-shadow:var(--glow-v);transform:translateY(-2px);}
+
+/* RING ANIMATION */
+.ring-container{position:relative;width:300px;height:300px;margin:3rem auto 0;}
+.ring{position:absolute;border-radius:50%;border:1px solid;animation:spin linear infinite;}
+.ring-1{width:300px;height:300px;top:0;left:0;border-color:rgba(0,229,255,0.3);animation-duration:8s;box-shadow:inset 0 0 40px rgba(0,229,255,0.05),0 0 40px rgba(0,229,255,0.05);}
+.ring-2{width:220px;height:220px;top:40px;left:40px;border-color:rgba(124,58,237,0.4);animation-duration:5s;animation-direction:reverse;}
+.ring-3{width:140px;height:140px;top:80px;left:80px;border-color:rgba(167,139,250,0.5);animation-duration:3s;}
+.ring-core{position:absolute;width:60px;height:60px;top:120px;left:120px;border-radius:50%;background:radial-gradient(circle,rgba(0,229,255,0.8),rgba(124,58,237,0.4),transparent);animation:pulse 2s ease-in-out infinite;}
+.ring-dot{position:absolute;width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px rgba(0,229,255,0.8);}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes pulse{0%,100%{opacity:0.6;transform:scale(1);}50%{opacity:1;transform:scale(1.15);}}
+
+/* SECTIONS */
+section{position:relative;z-index:1;padding:6rem 3rem;}
+.section-tag{font-family:'Rajdhani',sans-serif;font-size:0.8rem;letter-spacing:4px;color:var(--cyan);text-transform:uppercase;margin-bottom:0.75rem;display:flex;align-items:center;gap:1rem;}
+.section-tag::after{content:'';flex:1;height:1px;background:linear-gradient(to right,rgba(0,229,255,0.3),transparent);}
+.section-title{font-family:'Orbitron',monospace;font-size:clamp(1.8rem,3.5vw,2.8rem);font-weight:700;margin-bottom:1rem;color:var(--white);}
+.section-desc{color:var(--muted);font-size:1rem;max-width:600px;line-height:1.7;font-weight:300;}
+
+/* DIVIDER */
+.divider{width:100%;height:1px;background:linear-gradient(to right,transparent,rgba(0,229,255,0.2),rgba(124,58,237,0.2),transparent);position:relative;z-index:1;}
+
+/* ABOUT */
+#about-inner{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center;max-width:1200px;margin:0 auto;}
+.about-text p{color:var(--muted);line-height:1.8;margin-bottom:1rem;font-weight:300;}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.stat-card{background:var(--panel);border:1px solid rgba(0,229,255,0.1);padding:1.5rem;border-radius:4px;text-align:center;transition:border-color 0.3s;}
+.stat-card:hover{border-color:rgba(0,229,255,0.4);box-shadow:var(--glow-cyan);}
+.stat-number{font-family:'Orbitron',monospace;font-size:2rem;font-weight:900;color:var(--cyan);display:block;}
+.stat-label{font-size:0.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+
+/* RESEARCH AREAS */
+#research-inner{max-width:1200px;margin:0 auto;}
+.research-header{margin-bottom:3rem;}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;}
+.research-card{background:var(--panel);border:1px solid rgba(0,229,255,0.08);padding:2rem;border-radius:4px;position:relative;overflow:hidden;transition:all 0.4s;cursor:pointer;}
+.research-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(to right,var(--cyan),var(--violet));transform:scaleX(0);transition:transform 0.4s;}
+.research-card:hover::before{transform:scaleX(1);}
+.research-card:hover{border-color:rgba(0,229,255,0.25);transform:translateY(-4px);box-shadow:0 20px 40px rgba(0,0,0,0.4);}
+.card-icon{width:48px;height:48px;margin-bottom:1.5rem;opacity:0.8;}
+.card-icon svg{width:100%;height:100%;}
+.card-title{font-family:'Orbitron',monospace;font-size:1rem;font-weight:700;color:var(--white);margin-bottom:0.75rem;letter-spacing:1px;}
+.card-desc{color:var(--muted);font-size:0.9rem;line-height:1.6;font-weight:300;}
+.card-number{position:absolute;bottom:1.5rem;right:1.5rem;font-family:'Orbitron',monospace;font-size:2.5rem;font-weight:900;color:rgba(0,229,255,0.05);}
+
+/* PUBLICATIONS */
+#pub-inner{max-width:1000px;margin:0 auto;}
+.pub-list{display:flex;flex-direction:column;gap:1.5rem;margin-top:3rem;}
+.pub-item{background:var(--panel);border:1px solid rgba(124,58,237,0.15);padding:2rem;border-radius:4px;display:grid;grid-template-columns:auto 1fr;gap:2rem;align-items:start;transition:all 0.3s;}
+.pub-item:hover{border-color:rgba(124,58,237,0.4);box-shadow:var(--glow-v);}
+.pub-year{font-family:'Orbitron',monospace;font-size:0.8rem;color:var(--plasma);writing-mode:vertical-rl;letter-spacing:2px;}
+.pub-content h4{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:600;color:var(--white);margin-bottom:0.5rem;line-height:1.4;}
+.pub-content p{color:var(--muted);font-size:0.85rem;line-height:1.6;font-weight:300;}
+.pub-tags{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:1rem;}
+.pub-tag{padding:0.25rem 0.75rem;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);border-radius:2px;font-size:0.75rem;color:var(--plasma);font-family:'Rajdhani',sans-serif;letter-spacing:1px;}
+
+/* TEAM */
+#team-inner{max-width:1200px;margin:0 auto;}
+.team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.5rem;margin-top:3rem;}
+.team-card{background:var(--panel);border:1px solid rgba(0,229,255,0.08);padding:2rem 1.5rem;text-align:center;border-radius:4px;transition:all 0.4s;}
+.team-card:hover{border-color:rgba(0,229,255,0.3);transform:translateY(-6px);}
+.avatar{width:70px;height:70px;border-radius:50%;margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:1.2rem;font-weight:900;color:white;}
+.team-name{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:600;color:var(--white);margin-bottom:0.3rem;}
+.team-role{color:var(--cyan);font-size:0.8rem;letter-spacing:1px;text-transform:uppercase;font-family:'Rajdhani',sans-serif;margin-bottom:0.5rem;}
+.team-spec{color:var(--muted);font-size:0.8rem;font-weight:300;}
+
+/* CONTACT */
+#contact-inner{max-width:700px;margin:0 auto;text-align:center;}
+#contact-inner .section-tag{justify-content:center;}
+#contact-inner .section-tag::after{display:none;}
+#contact-inner .section-desc{margin:0 auto 2.5rem;}
+.contact-form{display:flex;flex-direction:column;gap:1rem;text-align:left;}
+.form-group{position:relative;}
+.form-group input,.form-group textarea{width:100%;background:var(--panel);border:1px solid rgba(0,229,255,0.15);padding:1rem 1.2rem;color:var(--white);font-family:'Space Grotesk',sans-serif;font-size:0.9rem;border-radius:2px;outline:none;transition:border-color 0.3s;}
+.form-group input:focus,.form-group textarea:focus{border-color:var(--cyan);box-shadow:var(--glow-cyan);}
+.form-group textarea{min-height:120px;resize:vertical;}
+.form-group label{position:absolute;left:1.2rem;top:1rem;color:var(--muted);font-size:0.85rem;pointer-events:none;transition:all 0.3s;}
+.form-group input:focus+label,.form-group input:not(:placeholder-shown)+label,.form-group textarea:focus+label,.form-group textarea:not(:placeholder-shown)+label{top:-0.6rem;left:0.8rem;font-size:0.72rem;color:var(--cyan);background:var(--void);padding:0 0.3rem;}
+.form-group input::placeholder,.form-group textarea::placeholder{color:transparent;}
+
+/* FOOTER */
+footer{position:relative;z-index:1;padding:3rem;border-top:1px solid rgba(0,229,255,0.08);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;}
+.footer-logo{font-family:'Orbitron',monospace;font-size:0.9rem;font-weight:900;color:var(--cyan);}
+.footer-copy{color:var(--muted);font-size:0.8rem;}
+.footer-links{display:flex;gap:1.5rem;}
+.footer-links a{color:var(--muted);text-decoration:none;font-size:0.8rem;transition:color 0.3s;}
+.footer-links a:hover{color:var(--cyan);}
+
+/* SCAN LINE */
+.scanline{position:fixed;top:0;left:0;width:100%;height:100%;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,0.008) 2px,rgba(0,229,255,0.008) 4px);pointer-events:none;z-index:2;}
+
+/* SCROLL INDICATOR */
+.scroll-ind{position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:0.5rem;color:var(--muted);font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;}
+.scroll-line{width:1px;height:40px;background:linear-gradient(to bottom,var(--cyan),transparent);animation:scroll-anim 1.5s ease-in-out infinite;}
+@keyframes scroll-anim{0%,100%{opacity:0;transform:translateY(-10px);}50%{opacity:1;transform:translateY(0);}}
+
+/* LOADING SCREEN */
+#loader{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--void);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1.5rem;transition:opacity 0.8s ease;}
+#loader.hidden{opacity:0;pointer-events:none;}
+.loader-ring{width:80px;height:80px;border:2px solid rgba(0,229,255,0.1);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite;}
+.loader-text{font-family:'Orbitron',monospace;font-size:0.75rem;letter-spacing:4px;color:var(--muted);text-transform:uppercase;}
+
+@media(max-width:768px){
+  #about-inner{grid-template-columns:1fr;}
+  nav{padding:1rem 1.5rem;}
+  section{padding:4rem 1.5rem;}
+  footer{flex-direction:column;text-align:center;}
+  .nav-links{gap:1rem;font-size:0.75rem;}
+  .nav-links a{letter-spacing:0.5px;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-ring"></div>
+  <div class="loader-text">Initializing Field Systems...</div>
+</div>
+
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+<canvas id="particle-canvas"></canvas>
+<div class="scanline"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">AG<span>RL</span></div>
+  <div class="nav-links">
+    <a href="#about">About</a>
+    <a href="#research">Research</a>
+    <a href="#publications">Papers</a>
+    <a href="#team">Team</a>
+    <a href="#contact">Contact</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-tag">Anti-Gravity Research Laboratory</div>
+  <h1 class="hero-title">Defying Gravity.<br>Defining the Future.</h1>
+  <p class="hero-sub">Pioneering the science of gravitational manipulation, magnetic levitation, and quantum propulsion at the frontier of theoretical and applied physics.</p>
+  <div class="hero-buttons">
+    <a href="#research" class="btn-primary">Explore Research</a>
+    <a href="#publications" class="btn-outline">View Publications</a>
+  </div>
+  <div class="ring-container">
+    <div class="ring ring-1"></div>
+    <div class="ring ring-2"></div>
+    <div class="ring ring-3"></div>
+    <div class="ring-core"></div>
+  </div>
+  <div class="scroll-ind">
+    <span>Scroll</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ABOUT -->
+<section id="about">
+  <div id="about-inner">
+    <div class="about-text">
+      <div class="section-tag">About</div>
+      <h2 class="section-title">Rewriting the Laws of Motion</h2>
+      <p>The Anti-Gravity Research Laboratory is an interdisciplinary group of physicists, engineers, and mathematicians dedicated to understanding and harnessing gravitational forces at a fundamental level.</p>
+      <p>Our work spans from theoretical frameworks in general relativity and quantum field theory to experimental prototyping of magnetic levitation systems and metamaterial-based field manipulation.</p>
+      <p>Founded with a vision to push boundaries, AGRL collaborates with institutions globally to accelerate the science of gravitational engineering.</p>
+      <a href="#team" class="btn-outline" style="margin-top:1.5rem;">Meet the Team</a>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><span class="stat-number">42+</span><span class="stat-label">Publications</span></div>
+      <div class="stat-card"><span class="stat-number">18</span><span class="stat-label">Researchers</span></div>
+      <div class="stat-card"><span class="stat-number">7</span><span class="stat-label">Active Projects</span></div>
+      <div class="stat-card"><span class="stat-number">12</span><span class="stat-label">Years Active</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- RESEARCH AREAS -->
+<section id="research">
+  <div id="research-inner">
+    <div class="research-header">
+      <div class="section-tag">Research Areas</div>
+      <h2 class="section-title">Fields of Investigation</h2>
+      <p class="section-desc">Our research spans six core domains at the intersection of physics, engineering, and geometry.</p>
+    </div>
+    <div class="cards-grid">
+      <div class="research-card">
+        <div class="card-icon">
+          <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="24" cy="24" r="20" stroke="#00e5ff" stroke-width="1.5"/>
+            <ellipse cx="24" cy="24" rx="20" ry="8" stroke="#7c3aed" stroke-width="1.5"/>
+            <circle cx="24" cy="24" r="3" fill="#00e5ff"/>
+          </svg>
+        </div>
+        <div class="card-title">Magnetic Levitation</div>
+        <div class="card-desc">High-temperature superconductor systems and Meissner effect applications for frictionless transport and energy storage.</div>
+        <div class="card-number">01</div>
+      </div>
+      <div class="research-card">
+        <div class="card-icon">
+          <svg viewBox="0 0 48 48" fill="none">
+            <polygon points="24,4 44,40 4,40" stroke="#a78bfa" stroke-width="1.5"/>
+            <polygon points="24,14 36,36 12,36" stroke="#00e5ff" stroke-width="1"/>
+            <circle cx="24" cy="26" r="3" fill="#7c3aed"/>
+          </svg>
+        </div>
+        <div class="card-title">Quantum Field Propulsion</div>
+        <div class="card-desc">Theoretical models for momentum transfer via quantum vacuum fluctuations and zero-point energy fields.</div>
+        <div class="card-number">02</div>
+      </div>
+      <div class="research-card">
+        <div class="card-icon">
+          <svg viewBox="0 0 48 48" fill="none">
+            <rect x="8" y="8" width="14" height="14" stroke="#00e5ff" stroke-width="1.5"/>
+            <rect x="26" y="8" width="14" height="14" stroke="#a78bfa" stroke-width="1.5"/>
+            <rect x="8" y="26" width="14" height="14" stroke="#a78bfa" stroke-width="1.5"/>
+            <rect x="26" y="26" width="14" height="14" stroke="#00e5ff" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div class="card-title">Metamaterial Design</div>
+        <div class="card-desc">Engineering negative-index materials and engineered structures with exotic electromagnetic and mechanical properties.</div>
+        <div class="card-number">03</div>
+      </div>
+      <div class="research-card">
+        <div class="card-icon">
+          <svg viewBox="0 0 48 48" fill="none">
+            <path d="M4 24 Q14 8 24 24 Q34 40 44 24" stroke="#00e5ff" stroke-width="1.5"/>
+            <path d="M4 24 Q14 40 24 24 Q34 8 44 24" stroke="#7c3aed" stroke-width="1.5"/>
+            <circle cx="24" cy="24" r="3" fill="#a78bfa"/>
+          </svg>
+        </div>
+        <div class="card-title">Spacetime Curvature</div>
+        <div class="card-desc">Applied general relativity for spacecraft navigation, geodesic engineering, and warp metric feasibility studies.</div>
+        <div class="card-number">04</div>
+      </div>
+      <div class="research-card">
+        <div class="card-icon">
+          <svg viewBox="0 0 48 48" fill="none">
+            <circle cx="24" cy="24" r="18" stroke="#a78bfa" stroke-width="1" stroke-dasharray="3 3"/>
+            <path d="M12 24 L24 12 L36 24 L24 36 Z" stroke="#00e5ff" stroke-width="1.5"/>
+            <circle cx="24" cy="24" r="4" fill="#7c3aed"/>
+          </svg>
+        </div>
+        <div class="card-title">Geometric Progression</div>
+        <div class="card-desc">Dual Platonic solid inward 3D geometric progressions and their implications for gravitational field symmetry.</div>
+        <div class="card-number">05</div>
+      </div>
+      <div class="research-card">
+        <div class="card-icon">
+          <svg viewBox="0 0 48 48" fill="none">
+            <line x1="24" y1="4" x2="24" y2="44" stroke="#00e5ff" stroke-width="1.5"/>
+            <line x1="4" y1="24" x2="44" y2="24" stroke="#00e5ff" stroke-width="1.5"/>
+            <circle cx="24" cy="14" r="3" fill="#a78bfa"/>
+            <circle cx="24" cy="34" r="3" fill="#a78bfa"/>
+            <circle cx="14" cy="24" r="3" fill="#7c3aed"/>
+            <circle cx="34" cy="24" r="3" fill="#7c3aed"/>
+          </svg>
+        </div>
+        <div class="card-title">Inertial Dampening</div>
+        <div class="card-desc">Active and passive systems for inertial mass reduction using resonance fields and coupled oscillator arrays.</div>
+        <div class="card-number">06</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- PUBLICATIONS -->
+<section id="publications">
+  <div id="pub-inner">
+    <div class="section-tag">Publications</div>
+    <h2 class="section-title">Selected Research Papers</h2>
+    <div class="pub-list">
+      <div class="pub-item">
+        <div class="pub-year">2024</div>
+        <div class="pub-content">
+          <h4>On Inward 3D Geometric Progression of Dual Platonic Solids and Results</h4>
+          <p>Establishes a rigorous framework for nested dual Platonic solid sequences and their convergence properties in metric geometry, with applications to gravitational field modeling and theoretical physics.</p>
+          <div class="pub-tags">
+            <span class="pub-tag">Metric Geometry</span>
+            <span class="pub-tag">Platonic Solids</span>
+            <span class="pub-tag">3D Progression</span>
+          </div>
+        </div>
+      </div>
+      <div class="pub-item">
+        <div class="pub-year">2023</div>
+        <div class="pub-content">
+          <h4>Meissner Effect at High-Temperature Superconductors: Levitation Threshold Analysis</h4>
+          <p>Experimental study quantifying the critical magnetic flux density required for stable levitation in YBCO superconductor configurations under varied thermal gradients.</p>
+          <div class="pub-tags">
+            <span class="pub-tag">Superconductors</span>
+            <span class="pub-tag">Levitation</span>
+            <span class="pub-tag">Experimental</span>
+          </div>
+        </div>
+      </div>
+      <div class="pub-item">
+        <div class="pub-year">2022</div>
+        <div class="pub-content">
+          <h4>Negative Mass Propulsion: A Theoretical Framework Using Quantum Vacuum Energy</h4>
+          <p>Proposes a quantum field theoretic model for effectively negative inertial mass via zero-point field coupling, enabling reactionless thrust without violating conservation laws.</p>
+          <div class="pub-tags">
+            <span class="pub-tag">Quantum Vacuum</span>
+            <span class="pub-tag">Propulsion</span>
+            <span class="pub-tag">Theoretical</span>
+          </div>
+        </div>
+      </div>
+      <div class="pub-item">
+        <div class="pub-year">2021</div>
+        <div class="pub-content">
+          <h4>Electromagnetic Metamaterial Arrays for Gravitational Analogue Experiments</h4>
+          <p>Design and fabrication of negative-permittivity metamaterial cells that replicate gravitational lensing effects at laboratory scales for controlled experimentation.</p>
+          <div class="pub-tags">
+            <span class="pub-tag">Metamaterials</span>
+            <span class="pub-tag">Gravitational Lensing</span>
+            <span class="pub-tag">Lab Scale</span>
+          </div>
+        </div>
+      </div>
+      <div class="pub-item">
+        <div class="pub-year">2020</div>
+        <div class="pub-content">
+          <h4>Casimir Effect Harvesting for Micro-Scale Propulsion Systems</h4>
+          <p>Investigation of Casimir force amplification using structured metallic plates, proposing a viable mechanism for ultra-low-thrust micro-satellite propulsion in vacuum.</p>
+          <div class="pub-tags">
+            <span class="pub-tag">Casimir Effect</span>
+            <span class="pub-tag">Micro-Propulsion</span>
+            <span class="pub-tag">Vacuum Physics</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- TEAM -->
+<section id="team">
+  <div id="team-inner">
+    <div class="section-tag">The Team</div>
+    <h2 class="section-title">Research Scientists</h2>
+    <div class="team-grid">
+      <div class="team-card">
+        <div class="avatar" style="background:linear-gradient(135deg,#7c3aed,#00e5ff);">DR</div>
+        <div class="team-name">Dr. R. Menon</div>
+        <div class="team-role">Director</div>
+        <div class="team-spec">Quantum Field Theory</div>
+      </div>
+      <div class="team-card">
+        <div class="avatar" style="background:linear-gradient(135deg,#00e5ff,#a78bfa);">AN</div>
+        <div class="team-name">A. Nair</div>
+        <div class="team-role">Senior Researcher</div>
+        <div class="team-spec">Metric Geometry</div>
+      </div>
+      <div class="team-card">
+        <div class="avatar" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);">SK</div>
+        <div class="team-name">S. Kumar</div>
+        <div class="team-role">Lead Engineer</div>
+        <div class="team-spec">Superconductors</div>
+      </div>
+      <div class="team-card">
+        <div class="avatar" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);">PV</div>
+        <div class="team-name">P. Varma</div>
+        <div class="team-role">Theorist</div>
+        <div class="team-spec">General Relativity</div>
+      </div>
+      <div class="team-card">
+        <div class="avatar" style="background:linear-gradient(135deg,#00e5ff,#7c3aed);">MT</div>
+        <div class="team-name">M. Thomas</div>
+        <div class="team-role">Researcher</div>
+        <div class="team-spec">Metamaterials</div>
+      </div>
+      <div class="team-card">
+        <div class="avatar" style="background:linear-gradient(135deg,#a78bfa,#00e5ff);">RK</div>
+        <div class="team-name">R. Krishnan</div>
+        <div class="team-role">PhD Scholar</div>
+        <div class="team-spec">Quantum Propulsion</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div id="contact-inner">
+    <div class="section-tag">Contact</div>
+    <h2 class="section-title">Join or Collaborate</h2>
+    <p class="section-desc">We welcome collaborations from researchers, institutions, and industry partners. Reach out to discuss joint projects, visiting fellowships, or publication partnerships.</p>
+    <div class="contact-form">
+      <div class="form-group">
+        <input type="text" id="name" placeholder="Name">
+        <label for="name">Full Name</label>
+      </div>
+      <div class="form-group">
+        <input type="email" id="email" placeholder="Email">
+        <label for="email">Email Address</label>
+      </div>
+      <div class="form-group">
+        <input type="text" id="org" placeholder="Organization">
+        <label for="org">Institution / Organization</label>
+      </div>
+      <div class="form-group">
+        <textarea id="msg" placeholder="Message"></textarea>
+        <label for="msg">Your Message</label>
+      </div>
+      <button class="btn-primary" style="align-self:flex-start;border:none;" onclick="this.textContent='Transmitted ✓';this.style.background='#7c3aed';this.disabled=true;">Transmit Message</button>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">AGRL — Anti-Gravity Research Laboratory</div>
+  <div class="footer-copy">© 2025 AGRL. All rights reserved.</div>
+  <div class="footer-links">
+    <a href="#">ResearchGate</a>
+    <a href="#">arXiv</a>
+    <a href="#">LinkedIn</a>
+    <a href="#">GitHub</a>
+  </div>
+</footer>
+
+<script>
+// LOADER
+window.addEventListener('load',()=>{
+  setTimeout(()=>{
+    document.getElementById('loader').classList.add('hidden');
+    setTimeout(()=>document.getElementById('loader').remove(),800);
+  },1500);
+});
+
+// CUSTOM CURSOR
+const cursor=document.getElementById('cursor');
+const ring=document.getElementById('cursor-ring');
+document.addEventListener('mousemove',e=>{
+  cursor.style.left=e.clientX+'px';
+  cursor.style.top=e.clientY+'px';
+  setTimeout(()=>{
+    ring.style.left=e.clientX+'px';
+    ring.style.top=e.clientY+'px';
+  },80);
+});
+document.querySelectorAll('a,button,.research-card,.team-card,.stat-card').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{
+    ring.style.transform='translate(-50%,-50%) scale(2)';
+    ring.style.borderColor='rgba(0,229,255,0.8)';
+  });
+  el.addEventListener('mouseleave',()=>{
+    ring.style.transform='translate(-50%,-50%) scale(1)';
+    ring.style.borderColor='rgba(0,229,255,0.5)';
+  });
+});
+
+// PARTICLE CANVAS
+const canvas=document.getElementById('particle-canvas');
+const ctx=canvas.getContext('2d');
+function resizeCanvas(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
+resizeCanvas();
+window.addEventListener('resize',resizeCanvas);
+const particles=[];
+for(let i=0;i<130;i++){
+  particles.push({
+    x:Math.random()*canvas.width,
+    y:Math.random()*canvas.height,
+    vx:(Math.random()-0.5)*0.3,
+    vy:(Math.random()-0.5)*0.3,
+    r:Math.random()*1.5+0.3,
+    c:Math.random()>0.5?'rgba(0,229,255,':'rgba(124,58,237,',
+    o:Math.random()*0.5+0.1
+  });
+}
+function drawParticles(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  particles.forEach(p=>{
+    p.x+=p.vx;p.y+=p.vy;
+    if(p.x<0)p.x=canvas.width;
+    if(p.x>canvas.width)p.x=0;
+    if(p.y<0)p.y=canvas.height;
+    if(p.y>canvas.height)p.y=0;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle=p.c+p.o+')';
+    ctx.fill();
+  });
+  particles.forEach((p,i)=>{
+    for(let j=i+1;j<particles.length;j++){
+      const dx=p.x-particles[j].x,dy=p.y-particles[j].y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<100){
+        ctx.beginPath();
+        ctx.moveTo(p.x,p.y);
+        ctx.lineTo(particles[j].x,particles[j].y);
+        ctx.strokeStyle=`rgba(0,229,255,${0.06*(1-dist/100)})`;
+        ctx.lineWidth=0.5;
+        ctx.stroke();
+      }
+    }
+  });
+  requestAnimationFrame(drawParticles);
+}
+drawParticles();
+
+// RING DOTS
+const rc=document.querySelector('.ring-container');
+if(rc){
+  [0,90,180,270].forEach(deg=>{
+    const dot=document.createElement('div');
+    dot.className='ring-dot';
+    const r=150,rad=deg*Math.PI/180;
+    dot.style.cssText=`position:absolute;width:6px;height:6px;border-radius:50%;background:#00e5ff;box-shadow:0 0 10px rgba(0,229,255,0.8);left:${r+Math.cos(rad)*r-3}px;top:${r+Math.sin(rad)*r-3}px;`;
+    rc.appendChild(dot);
+  });
+}
+
+// SCROLL REVEAL
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting){
+      entry.target.style.opacity='1';
+      entry.target.style.transform='translateY(0)';
+    }
+  });
+},{threshold:0.1});
+document.querySelectorAll('.research-card,.pub-item,.team-card,.stat-card').forEach(el=>{
+  el.style.opacity='0';
+  el.style.transform='translateY(30px)';
+  el.style.transition='opacity 0.6s ease, transform 0.6s ease';
+  observer.observe(el);
+});
+
+// ACTIVE NAV LINK
+const sections=document.querySelectorAll('section[id]');
+window.addEventListener('scroll',()=>{
+  let current='';
+  sections.forEach(s=>{
+    if(window.scrollY>=s.offsetTop-200)current=s.id;
+  });
+  document.querySelectorAll('.nav-links a').forEach(a=>{
+    a.style.color=a.getAttribute('href')==='#'+current?'var(--cyan)':'var(--muted)';
+  });
+});
+</script>
+</body>
+</html>
